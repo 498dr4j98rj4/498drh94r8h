@@ -60,15 +60,24 @@ else
         sed -i '/^PostUp/d' /etc/wireguard/wg0_no_iptables.conf
         sed -i '/^PostDown/d' /etc/wireguard/wg0_no_iptables.conf
 
+        set +e
         WG_START_OUTPUT_2=$(wg-quick up /etc/wireguard/wg0_no_iptables.conf 2>&1)
-        if [ $? -eq 0 ]; then
+        WG_EXIT_CODE_2=$?
+        set -e
+        if [ $WG_EXIT_CODE_2 -eq 0 ]; then
              echo "[System] WireGuard started successfully WITHOUT routing rules."
              echo "SUCCESS_NO_ROUTING" > /etc/wireguard/wg_exit_code.log
+        else
+             echo "[Warning] WireGuard failed to start even without iptables rules. Bypassing to allow panel to run."
+             echo "FAILED_FULLY" > /etc/wireguard/wg_exit_code.log
         fi
+    else
+        echo "[Warning] WireGuard failed to start for a reason other than iptables. Bypassing to allow panel to run."
+        echo "FAILED_FULLY" > /etc/wireguard/wg_exit_code.log
     fi
 fi
 
 echo "========================================================="
-echo "[System] Starting Web Dashboard on port 8080..."
+echo "[System] Starting Web Dashboard on port ${PORT:-8080}..."
 echo "========================================================="
-exec gunicorn --bind 0.0.0.0:8080 --workers 2 --timeout 120 app.main:app
+exec gunicorn --bind 0.0.0.0:${PORT:-8080} --workers 2 --timeout 120 app.main:app
