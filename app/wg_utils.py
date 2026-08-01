@@ -247,24 +247,35 @@ AllowedIPs = {ip_v4}/32, {ip_v6}/128
 def generate_client_config(peer: Dict) -> str:
     """Generate configuration string for client"""
     _, server_pub = get_server_keys()
-    host = os.environ.get("WG_HOST", "8.6.112.121")
-    port = os.environ.get("WG_PORT", "500")
+
+    # Allow overriding via environment variables for Railway / Wiresock
+    host = os.environ.get("WG_HOST", "498drh94r8h-production.up.railway.app")
+    port = os.environ.get("WG_PORT", "51820")
+
+    # Check if Wiresock/Socks parameters are provided via env
+    socks_port = os.environ.get("WG_SOCKS_PORT", "")
 
     ip_v4 = peer.get('ip_v4') or peer.get('ip') # fallback for old configs
     ip_v6 = peer.get('ip_v6') or '::/128'
 
-    return f"""[Interface]
+    config = f"""[Interface]
 PrivateKey = {peer.get('private_key')}
 Address = {ip_v4}/32, {ip_v6}/128
 DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001
 MTU = 1280
+"""
 
+    if socks_port:
+        config += f"SocksPort = {socks_port}\n"
+
+    config += f"""
 [Peer]
 PublicKey = {server_pub}
 AllowedIPs = 0.0.0.0/0, ::/0
 Endpoint = {host}:{port}
 PersistentKeepalive = 25
 """
+    return config
 
 def generate_qr_b64(config_str: str) -> str:
     """Generate QR code base64 string from config"""
