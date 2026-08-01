@@ -21,8 +21,10 @@ def index():
     except Exception as e:
         logger.error(f"Error getting server keys: {e}")
 
-    host = os.environ.get("WG_HOST", "Not configured (Set WG_HOST env var)")
-    return render_template('index.html', peers=peers, server_pub=server_pub, host=host)
+    host = os.environ.get("WG_HOST", "Not configured")
+    wg_version = wg_utils.get_wg_version()
+
+    return render_template('index.html', peers=peers, server_pub=server_pub, host=host, wg_version=wg_version)
 
 @app.route('/api/peers', methods=['GET'])
 def api_get_peers():
