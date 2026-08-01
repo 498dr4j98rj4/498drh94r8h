@@ -46,18 +46,13 @@ def main():
     else:
         print("No changes to commit.")
 
-    # Determine the current branch name (usually main or master)
-    branch_result = run_command(['git', 'branch', '--show-current'], check=False)
-    branch = branch_result.stdout.strip()
+    # Force the branch to be 'main'
+    branch = 'main'
+    run_command(['git', 'branch', '-M', branch], check=False)
 
-    if not branch:
-        # If no branch is active (e.g., brand new repo), checkout 'main'
-        branch = 'main'
-        run_command(['git', 'checkout', '-b', branch], check=False)
-
-    # Push to remote
-    print(f"Pushing to {repo_url} on branch {branch}...")
-    run_command(['git', 'push', '-u', 'origin', branch])
+    # Push to remote with force
+    print(f"Force pushing to {repo_url} on branch {branch}...")
+    run_command(['git', 'push', '-u', '-f', 'origin', branch])
 
     print("Push complete!")
 
