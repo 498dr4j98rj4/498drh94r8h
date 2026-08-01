@@ -1,0 +1,206 @@
+/* ReactBits style modern dark theme inspired aesthetic */
+:root {
+    --bg-main: #0a0a0a;
+    --bg-card: #111111;
+    --bg-card-hover: #18181a;
+    --border-color: #27272a;
+    --text-primary: #f4f4f5;
+    --text-secondary: #a1a1aa;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --success: #10b981;
+    --danger: #ef4444;
+    --radius-lg: 16px;
+    --radius-md: 12px;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Navbar */
+.navbar {
+    background-color: rgba(10, 10, 10, 0.8) !important;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 0;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text-primary) !important;
+}
+
+.navbar-brand i {
+    color: var(--accent) !important;
+}
+
+/* Cards & Containers */
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.card-header {
+    background-color: transparent;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1.25rem 1.5rem;
+}
+
+.card-footer {
+    border-top: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+}
+
+/* Stats Header Card */
+.card-stats {
+    background: linear-gradient(145deg, #161616, #0d0d0d);
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.card-stats::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), #8b5cf6);
+}
+
+/* Peer Cards */
+.peer-card {
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.peer-card:hover {
+    transform: translateY(-4px);
+    background-color: var(--bg-card-hover);
+    border-color: #3f3f46;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.peer-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+/* Badges */
+.badge {
+    padding: 0.4em 0.8em;
+    border-radius: 6px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+.bg-success { background-color: rgba(16, 185, 129, 0.15) !important; color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+.bg-secondary { background-color: rgba(161, 161, 170, 0.1) !important; color: var(--text-secondary); border: 1px solid rgba(161, 161, 170, 0.2); }
+
+/* Buttons */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+    border-color: var(--accent-hover);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+
+.btn-outline-secondary {
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.btn-outline-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: #52525b;
+    color: white;
+}
+
+/* Modal Styling */
+.modal-content {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+}
+
+.form-control {
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+}
+
+.form-control:focus {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+}
+
+.form-text {
+    color: var(--text-secondary);
+}
+
+/* Typography & Utilities */
+.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+.font-monospace {
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace !important;
+    font-size: 0.85em;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-main);
+}
+::-webkit-scrollbar-thumb {
+    background: #3f3f46;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #52525b;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.peer-item {
+    animation: fadeIn 0.4s ease-out forwards;
+}
