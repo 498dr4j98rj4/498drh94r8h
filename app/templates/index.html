@@ -83,6 +83,20 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Diagnostics Section -->
+                    <div id="diagnosticsSection" class="mt-3 {% if not wg_info.diagnostics %}d-none{% endif %}">
+                        <div class="alert alert-danger bg-danger bg-opacity-10 border-danger mb-0 p-3" role="alert">
+                            <h6 class="alert-heading fw-bold d-flex align-items-center mb-2">
+                                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i> System Diagnostics (Why it is failing)
+                            </h6>
+                            <ul class="mb-0 small font-monospace" id="diagnosticsList">
+                                {% for diag in wg_info.diagnostics %}
+                                    <li>{{ diag }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

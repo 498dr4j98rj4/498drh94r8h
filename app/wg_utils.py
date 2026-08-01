@@ -33,14 +33,15 @@ def run_cmd(cmd: List[str], input_data: str = None, check_err: bool = True) -> s
         return ""
 
 def get_core_info() -> Dict[str, Any]:
-    """Gather comprehensive WireGuard Core information from the system."""
+    """Gather comprehensive WireGuard Core information and diagnostics."""
     info = {
         "version": "Unknown",
         "implementation": "Unknown",
         "path": "Not Found",
         "status": "Stopped",
         "interface": "wg0",
-        "port": "Unknown"
+        "port": "Unknown",
+        "diagnostics": []
     }
 
     # 1. Get Version & Implementation
@@ -50,24 +51,48 @@ def get_core_info() -> Dict[str, Any]:
         ver_out = run_cmd(["wg", "--version"], check_err=False)
         info["version"] = ver_out if ver_out else "Installed (Version Unknown)"
 
-    # Check for wireguard-go
     if shutil.which("wireguard-go"):
         info["implementation"] = "Userspace (wireguard-go)"
     else:
         info["implementation"] = "Kernel Module (wg)"
 
-    # 2. Check Running Status
+    # 2. Check System Diagnostics (Why might it be failing?)
+    tun_exists = os.path.exists('/dev/net/tun')
+    if not tun_exists:
+        info["diagnostics"].append("Error: /dev/net/tun device is missing. Hosting provider restricts network interfaces.")
+
+    # Read the startup logs captured by entrypoint.sh
+    try:
+        if os.path.exists("/etc/wireguard/wg_exit_code.log"):
+            with open("/etc/wireguard/wg_exit_code.log", "r") as f:
+                exit_code = f.read().strip()
+
+            if exit_code == "0":
+                info["status"] = "Active & Running"
+            elif exit_code == "SUCCESS_NO_ROUTING":
+                info["status"] = "Running (No Internet Routing)"
+                info["diagnostics"].append("Warning: iptables failed. VPN connects, but clients cannot browse the internet. Requires NET_ADMIN privileges.")
+            else:
+                info["status"] = "Failed to Start"
+                if os.path.exists("/etc/wireguard/wg_startup.log"):
+                    with open("/etc/wireguard/wg_startup.log", "r") as f:
+                        err_log = f.read().strip()
+                        if "Operation not permitted" in err_log:
+                            info["diagnostics"].append("Fatal: Operation not permitted. The container lacks NET_ADMIN or privileged capabilities required to run a VPN.")
+                        elif err_log:
+                            # Just show the first line of the error to keep it clean
+                            info["diagnostics"].append(f"Startup Error: {err_log.splitlines()[0]}")
+    except Exception:
+        pass
+
+    # 3. Check Live Running Status (double check)
     try:
         ip_link = run_cmd(["ip", "link", "show", "wg0"], check_err=False)
         if "wg0:" in ip_link and "state UNKNOWN" not in ip_link and "state DOWN" not in ip_link:
             info["status"] = "Active & Running"
-
-            # Fetch active port
             port_info = run_cmd(["wg", "show", "wg0", "listen-port"], check_err=False)
             if port_info.isdigit():
                 info["port"] = port_info
-        elif "wg0" in ip_link:
-            info["status"] = "Interface exists (DOWN)"
     except Exception:
         pass
 
