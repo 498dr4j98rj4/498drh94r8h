@@ -2,7 +2,6 @@ import os
 import logging
 from flask import Flask, render_template, request, jsonify, send_file, Response
 import app.wg_utils as wg_utils
-import io
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -13,7 +12,7 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
 
 @app.route('/')
 def index():
-    """Dashboard view"""
+    """Main Dashboard View"""
     peers = wg_utils.get_peers()
     server_pub = ""
     try:
@@ -22,18 +21,22 @@ def index():
         logger.error(f"Error getting server keys: {e}")
 
     host = os.environ.get("WG_HOST", "Not configured")
-    wg_version = wg_utils.get_wg_version()
+    wg_info = wg_utils.get_core_info()
 
-    return render_template('index.html', peers=peers, server_pub=server_pub, host=host, wg_version=wg_version)
+    return render_template(
+        'index.html',
+        peers=peers,
+        server_pub=server_pub,
+        host=host,
+        wg_info=wg_info
+    )
 
 @app.route('/api/peers', methods=['GET'])
 def api_get_peers():
-    """API endpoint to get peers with stats"""
     return jsonify(wg_utils.get_peers())
 
 @app.route('/api/peers', methods=['POST'])
 def api_add_peer():
-    """API endpoint to add a peer"""
     data = request.json
     name = data.get('name', '').strip()
 
@@ -49,7 +52,6 @@ def api_add_peer():
 
 @app.route('/api/peers/<peer_id>', methods=['DELETE'])
 def api_remove_peer(peer_id):
-    """API endpoint to remove a peer"""
     try:
         success = wg_utils.remove_peer(peer_id)
         if success:
@@ -60,9 +62,24 @@ def api_remove_peer(peer_id):
         logger.error(f"Error removing peer: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/regenerate_config', methods=['POST'])
+def api_regenerate_config():
+    """Force regenerate wg0.conf from JSON database to fix broken states."""
+    try:
+        peers = wg_utils.get_peers()
+        wg_utils.rewrite_wg_conf(peers)
+        return jsonify({"success": True, "message": "Config regenerated successfully."})
+    except Exception as e:
+        logger.error(f"Error regenerating config: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/core_status', methods=['GET'])
+def api_core_status():
+    """Endpoint for AJAX polling of core status."""
+    return jsonify(wg_utils.get_core_info())
+
 @app.route('/peer/<peer_id>/config')
 def download_config(peer_id):
-    """Download peer configuration file"""
     peers = wg_utils.get_peers()
     peer = next((p for p in peers if p.get("id") == peer_id), None)
 
@@ -71,7 +88,6 @@ def download_config(peer_id):
 
     config_str = wg_utils.generate_client_config(peer)
 
-    # Return as downloadable file
     return Response(
         config_str,
         mimetype="text/plain",
@@ -80,7 +96,6 @@ def download_config(peer_id):
 
 @app.route('/peer/<peer_id>/qr')
 def get_qr_code(peer_id):
-    """Get peer configuration as QR code (HTML page)"""
     peers = wg_utils.get_peers()
     peer = next((p for p in peers if p.get("id") == peer_id), None)
 
@@ -93,7 +108,6 @@ def get_qr_code(peer_id):
     return render_template('qr.html', peer=peer, qr_b64=qr_b64)
 
 if __name__ == '__main__':
-    # Initialize server if needed
     try:
         wg_utils.init_server()
     except Exception as e:

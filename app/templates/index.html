@@ -32,7 +32,7 @@
             <div class="d-flex align-items-center gap-3">
                 <div class="nav-badge wg-version">
                     <i class="bi bi-cpu me-2"></i>
-                    <span>{{ wg_version }}</span>
+                    <span>WG {{ wg_info.implementation }}</span>
                 </div>
                 <div class="nav-badge server-endpoint">
                     <i class="bi bi-hdd-network me-2"></i>
@@ -43,14 +43,58 @@
     </nav>
 
     <div class="container main-container">
+        <!-- WG Core Info Panel -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="core-info-panel p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-3">
+                        <h5 class="mb-0 fw-bold text-light d-flex align-items-center">
+                            <i class="bi bi-motherboard text-primary me-2 fs-4"></i> WireGuard Core Status
+                        </h5>
+                        <button class="btn btn-sm btn-outline-warning" onclick="regenerateConfig()" id="btnRegen">
+                            <i class="bi bi-arrow-repeat me-1"></i> Regenerate Configs
+                        </button>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-3 col-sm-6">
+                            <div class="core-stat">
+                                <span class="core-label">Core Status</span>
+                                <span class="core-val {% if 'Running' in wg_info.status %}text-success{% else %}text-danger{% endif %}" id="coreStatus">
+                                    <i class="bi bi-circle-fill me-1" style="font-size:0.6rem"></i> {{ wg_info.status }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="core-stat">
+                                <span class="core-label">Implementation</span>
+                                <span class="core-val text-info">{{ wg_info.implementation }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="core-stat">
+                                <span class="core-label">Version Output</span>
+                                <span class="core-val text-muted small text-truncate" title="{{ wg_info.version }}">{{ wg_info.version }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="core-stat">
+                                <span class="core-label">Interface & Port</span>
+                                <span class="core-val text-light font-monospace">{{ wg_info.interface }} : {{ wg_info.port }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Dashboard Header -->
         <div class="row mb-5 align-items-center">
             <div class="col-lg-8">
-                <h1 class="display-5 fw-bold mb-2 title-gradient">Network Dashboard</h1>
-                <p class="text-secondary fs-5 mb-0">Manage your secure tunnels and peer configurations.</p>
+                <h1 class="display-6 fw-bold mb-2 title-gradient">Network Dashboard</h1>
+                <p class="text-secondary fs-6 mb-0">Manage your secure tunnels and peer configurations.</p>
             </div>
             <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
-                <button class="btn btn-primary btn-add-peer btn-lg" data-bs-toggle="modal" data-bs-target="#addPeerModal">
+                <button class="btn btn-primary btn-add-peer btn-lg w-100 w-lg-auto" data-bs-toggle="modal" data-bs-target="#addPeerModal">
                     <i class="bi bi-plus-circle-fill me-2"></i> Add New Peer
                 </button>
             </div>
@@ -67,7 +111,7 @@
                 <div class="col-md">
                     <h6 class="text-uppercase tracking-wider text-muted mb-2 fw-semibold">Server Public Key</h6>
                     <div class="d-flex align-items-center gap-3">
-                        <code class="pubkey-display fs-5">{{ server_pub }}</code>
+                        <code class="pubkey-display fs-6">{{ server_pub }}</code>
                         <button class="btn btn-sm btn-outline-secondary btn-copy" onclick="navigator.clipboard.writeText('{{ server_pub }}')">
                             <i class="bi bi-clipboard"></i>
                         </button>
@@ -119,21 +163,21 @@
                                 </div>
                             </div>
                             {% else %}
-                            <div class="empty-stats">
+                            <div class="empty-stats text-center py-3">
                                 <i class="bi bi-activity text-muted mb-2 fs-3 d-block"></i>
-                                <span>No connection data yet</span>
+                                <span class="text-secondary small">No connection data yet</span>
                             </div>
                             {% endif %}
                         </div>
 
                         <div class="peer-actions d-flex gap-2 mt-auto">
-                            <a href="/peer/{{ peer.id }}/config" class="btn btn-action flex-grow-1">
+                            <a href="/peer/{{ peer.id }}/config" class="btn btn-action flex-grow-1 text-center">
                                 <i class="bi bi-download"></i> Config
                             </a>
-                            <a href="/peer/{{ peer.id }}/qr" target="_blank" class="btn btn-action">
+                            <a href="/peer/{{ peer.id }}/qr" target="_blank" class="btn btn-action text-center px-3">
                                 <i class="bi bi-qr-code"></i>
                             </a>
-                            <button class="btn btn-action btn-danger-action" onclick="deletePeer('{{ peer.id }}', '{{ peer.name }}')">
+                            <button class="btn btn-action btn-danger-action px-3" onclick="deletePeer('{{ peer.id }}', '{{ peer.name }}')">
                                 <i class="bi bi-trash3"></i>
                             </button>
                         </div>
@@ -178,6 +222,18 @@
                     <button type="button" class="btn btn-light rounded-pill px-4 fw-medium text-dark" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary btn-add-peer px-4" onclick="submitAddPeer()" id="addBtn">Generate Config</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="liveToast" class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMsg">
+                    Message
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     </div>

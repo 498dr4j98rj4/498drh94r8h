@@ -1,5 +1,3 @@
-// Main JavaScript functionality
-
 // Format bytes to human readable format
 function formatBytes(bytes, decimals = 2) {
     if (!+bytes) return '0 B';
@@ -22,6 +20,22 @@ function formatHandshake(timestamp) {
     return `${Math.floor(diff/86400)}d ago`;
 }
 
+// Show Toast
+function showToast(message, type = 'success') {
+    const toastEl = document.getElementById('liveToast');
+    const toastBody = document.getElementById('toastMsg');
+
+    toastBody.textContent = message;
+
+    toastEl.classList.remove('bg-primary', 'bg-danger', 'bg-success', 'bg-warning');
+    if (type === 'error') toastEl.classList.add('bg-danger');
+    else if (type === 'warning') toastEl.classList.add('bg-warning', 'text-dark');
+    else toastEl.classList.add('bg-success');
+
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+}
+
 // Apply formatters to DOM elements
 function applyFormatting() {
     document.querySelectorAll('.rx-bytes, .tx-bytes').forEach(el => {
@@ -35,45 +49,71 @@ function applyFormatting() {
     });
 }
 
-// Poll API for stats updates
-async function pollStats() {
+// Poll API for stats and core updates
+async function pollData() {
     try {
-        const res = await fetch('/api/peers');
-        if (!res.ok) return;
+        const [peersRes, coreRes] = await Promise.all([
+            fetch('/api/peers'),
+            fetch('/api/core_status')
+        ]);
 
-        const peers = await res.json();
+        if (peersRes.ok) {
+            const peers = await peersRes.json();
+            peers.forEach(peer => {
+                if (peer.stats) {
+                    const card = document.querySelector(`.peer-item[data-id="${peer.id}"]`);
+                    if (card) {
+                        const rx = card.querySelector('.rx-bytes');
+                        const tx = card.querySelector('.tx-bytes');
+                        const hs = card.querySelector('.handshake-time');
+                        const indicator = card.querySelector('.status-indicator');
 
-        peers.forEach(peer => {
-            if (peer.stats) {
-                const card = document.querySelector(`.peer-item[data-id="${peer.id}"]`);
-                if (card) {
-                    const rx = card.querySelector('.rx-bytes');
-                    const tx = card.querySelector('.tx-bytes');
-                    const hs = card.querySelector('.handshake-time');
-                    const badge = card.querySelector('.card-header .badge');
+                        if (rx) { rx.textContent = formatBytes(peer.stats.transfer_rx); rx.setAttribute('data-bytes', peer.stats.transfer_rx); }
+                        if (tx) { tx.textContent = formatBytes(peer.stats.transfer_tx); tx.setAttribute('data-bytes', peer.stats.transfer_tx); }
+                        if (hs) { hs.textContent = formatHandshake(peer.stats.latest_handshake); hs.setAttribute('data-time', peer.stats.latest_handshake); }
 
-                    if (rx) {
-                        rx.textContent = formatBytes(peer.stats.transfer_rx);
-                        rx.setAttribute('data-bytes', peer.stats.transfer_rx);
-                    }
-                    if (tx) {
-                        tx.textContent = formatBytes(peer.stats.transfer_tx);
-                        tx.setAttribute('data-bytes', peer.stats.transfer_tx);
-                    }
-                    if (hs) {
-                        hs.textContent = formatHandshake(peer.stats.latest_handshake);
-                        hs.setAttribute('data-time', peer.stats.latest_handshake);
-                    }
-
-                    if (badge && peer.stats.latest_handshake > 0) {
-                        badge.classList.remove('bg-secondary');
-                        badge.classList.add('bg-success');
+                        if (indicator && peer.stats.latest_handshake > 0) {
+                            indicator.classList.remove('inactive');
+                            indicator.classList.add('active');
+                        }
                     }
                 }
+            });
+        }
+
+        if (coreRes.ok) {
+            const core = await coreRes.json();
+            const statusEl = document.getElementById('coreStatus');
+            if (statusEl) {
+                statusEl.innerHTML = `<i class="bi bi-circle-fill me-1" style="font-size:0.6rem"></i> ${core.status}`;
+                statusEl.className = `core-val ${core.status.includes('Running') ? 'text-success' : 'text-danger'}`;
             }
-        });
+        }
     } catch (e) {
         console.error("Polling failed", e);
+    }
+}
+
+async function regenerateConfig() {
+    const btn = document.getElementById('btnRegen');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Working...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/regenerate_config', { method: 'POST' });
+        const data = await res.json();
+
+        if (res.ok) {
+            showToast('Configurations successfully regenerated and applied.');
+        } else {
+            showToast(data.error || 'Failed to regenerate configs', 'error');
+        }
+    } catch (e) {
+        showToast('Connection error during regeneration.', 'error');
+    } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
     }
 }
 
@@ -86,7 +126,7 @@ async function submitAddPeer() {
     const btn = document.getElementById('addBtn');
     const originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Adding...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generating...';
 
     try {
         const res = await fetch('/api/peers', {
@@ -99,12 +139,12 @@ async function submitAddPeer() {
             window.location.reload();
         } else {
             const data = await res.json();
-            alert(data.error || 'Failed to add peer');
+            showToast(data.error || 'Failed to generate peer config.', 'error');
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
     } catch (e) {
-        alert('Connection error');
+        showToast('Connection error', 'error');
         btn.disabled = false;
         btn.innerHTML = originalText;
     }
@@ -120,42 +160,36 @@ async function deletePeer(id, name) {
         if (res.ok) {
             const el = document.querySelector(`.peer-item[data-id="${id}"]`);
             if (el) {
-                // Fade out animation
                 el.style.transition = 'all 0.3s ease';
                 el.style.opacity = '0';
                 el.style.transform = 'scale(0.9)';
-
                 setTimeout(() => {
                     el.remove();
-                    // Reload if we just deleted the last item to show empty state
-                    if (document.querySelectorAll('.peer-item').length === 0) {
-                        window.location.reload();
-                    }
+                    if (document.querySelectorAll('.peer-item').length === 0) window.location.reload();
                 }, 300);
+                showToast(`Peer ${name} deleted.`);
             } else {
                 window.location.reload();
             }
         } else {
             const data = await res.json();
-            alert(data.error || 'Failed to delete peer');
+            showToast(data.error || 'Failed to delete peer', 'error');
         }
     } catch (e) {
-        alert('Connection error');
+        showToast('Connection error', 'error');
     }
 }
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     applyFormatting();
-    // Add staggered animation delay to peer cards
+
     document.querySelectorAll('.peer-item').forEach((el, index) => {
         el.style.animationDelay = `${index * 0.05}s`;
     });
 
-    // Poll every 5 seconds instead of 10 for more responsive UI
-    setInterval(pollStats, 5000);
+    setInterval(pollData, 5000);
 
-    // Handle enter key in add peer modal
     document.getElementById('peerName')?.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
